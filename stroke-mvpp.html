@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#16a34a" />
+  <title>Прогноз инсульта — MVP</title>
+
+  <!-- Иконка для домашнего экрана (iOS) -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%2316a34a'/%3E%3Ctext x='50' y='58' font-family='Arial' font-size='30' fill='white' text-anchor='middle'%3E🩺%3C/text%3E%3C/svg%3E">
+
+  <!-- Мета для PWA (Progressive Web App) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Прогноз инсульта">
+  <meta name="mobile-web-app-capable" content="yes">
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      line-height: 1.6;
+      padding: 15px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 15px;
+      color: #0f172a;
+      font-size: 24px;
+    }
+    .disclaimer {
+      background: #fffbeb;
+      border-left: 4px solid #eab308;
+      padding: 12px;
+      margin: 15px 0;
+      font-size: 0.95em;
+      color: #854d0e;
+      border-radius: 0 6px 6px 0;
+    }
+    label {
+      display: block;
+      margin: 14px 0 6px;
+      font-weight: 600;
+    }
+    .required::after {
+      content: " *";
+      color: red;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+    input:focus, select:focus {
+      outline: 2px solid #94a3b8;
+    }
+    button {
+      background: #16a34a;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 18px;
+      padding: 14px;
+      margin-top: 10px;
+    }
+    button:hover { background: #15803d; }
+    .result {
+      padding: 20px;
+      margin-top: 20px;
+      border-radius: 8px;
+      display: none;
+    }
+    .low { background: #dcfce7; border-left: 4px solid #22c55e; }
+    .moderate { background: #fef3c7; border-left: 4px solid #f59e0b; }
+    .high { background: #fee2e2; border-left: 4px solid #ef4444; color: #991b1b; }
+    .error {
+      color: #ef4444;
+      font-weight: bold;
+      margin-top: 10px;
+      padding: 10px;
+      background: #fef2f2;
+      border-radius: 6px;
+      display: none;
+    }
+    .rec {
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 1px dashed #cbd5e1;
+      font-size: 15px;
+    }
+    .edu {
+      margin-top: 30px;
+      padding-top: 25px;
+      border-top: 1px solid #e2e8f0;
+    }
+    ul { padding-left: 20px; margin: 10px 0; }
+    li { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Прогноз индивидуального риска инсульта на 6 месяцев</h1>
+    
+    <div class="disclaimer">
+      ⚠️ <strong>Внимание:</strong> Это не диагностический инструмент! 
+      При любых подозрительных симптомах звоните <strong>103</strong> или <strong>112</strong> немедленно!
+    </div>
+
+    <!-- Анкета без <form> -->
+    <label class="required">1. Возраст (полных лет)</label>
+    <input type="number" id="age" min="1" required inputmode="numeric" autocomplete="off">
+
+    <label class="required">Пол</label>
+    <select id="gender" required>
+      <option value="">--</option>
+      <option value="m">Мужской</option>
+      <option value="f">Женский</option>
+    </select>
+
+    <label class="required">2. Рост (см)</label>
+    <input type="number" id="height" min="100" max="250" step="0.1" required inputmode="decimal" autocomplete="off">
+
+    <label class="required">Вес (кг)</label>
+    <input type="number" id="weight" min="30" max="300" step="0.1" required inputmode="decimal" autocomplete="off">
+
+    <label class="required">3. Был ли инсульт у близких родственников?</label>
+    <select id="fam" required>
+      <option value="">--</option>
+      <option value="1">Да</option>
+      <option value="0">Нет</option>
+    </select>
+
+    <label class="required">4. Образ жизни</label>
+    <select id="activity" required>
+      <option value="">--</option>
+      <option value="active">Подвижный</option>
+      <option value="moderate">Умеренно активный</option>
+      <option value="sedentary">Малоподвижный</option>
+    </select>
+
+    <label class="required">5. Курение</label>
+    <select id="smoking" required>
+      <option value="">--</option>
+      <option value="current">Курю сейчас</option>
+      <option value="past">Бросил(а)</option>
+      <option value="never">Никогда не курил(а)</option>
+    </select>
+
+    <label class="required">6. Повышенное давление (>130 мм рт.ст.)?</label>
+    <select id="htn" required>
+      <option value="">--</option>
+      <option value="1">Да</option>
+      <option value="0">Нет</option>
+    </select>
+
+    <label class="required">7. Сахарный диабет?</label>
+    <select id="dm" required>
+      <option value="">--</option>
+      <option value="1">Да</option>
+      <option value="0">Нет</option>
+    </select>
+
+    <label class="required">8. Учащённое сердцебиение</label>
+    <select id="palp" required>
+      <option value="">--</option>
+      <option value="often">Часто</option>
+      <option value="rarely">Редко</option>
+      <option value="never">Никогда</option>
+    </select>
+
+    <label class="required">9. Не хватает воздуха при нагрузке?</label>
+    <select id="dysp" required>
+      <option value="">--</option>
+      <option value="often">Часто</option>
+      <option value="rarely">Редко</option>
+      <option value="never">Никогда</option>
+    </select>
+
+    <label class="required">10. Головокружение или обмороки?</label>
+    <select id="diz" required>
+      <option value="">--</option>
+      <option value="often">Часто</option>
+      <option value="rarely">Редко</option>
+      <option value="never">Никогда</option>
+    </select>
+
+    <label class="required">11. Мерцательная аритмия?</label>
+    <select id="afib" required>
+      <option value="">--</option>
+      <option value="1">Да</option>
+      <option value="0">Нет</option>
+    </select>
+
+    <label class="required">12. Уровень ЛПНП-холестерина (ммоль/л)</label>
+    <input type="number" id="ldl" min="0" max="20" step="0.1" required inputmode="decimal" autocomplete="off">
+
+    <!-- 🔴 13-й ОБЯЗАТЕЛЬНЫЙ ВОПРОС -->
+    <label class="required" style="color: red; font-weight: bold;">
+      13. Был ли у вас инсульт?
+    </label>
+    <select id="stroke" required>
+      <option value="">--</option>
+      <option value="1">Да</option>
+      <option value="0">Нет</option>
+    </select>
+
+    <button type="button" onclick="calculate()">Рассчитать риск</button>
+    <div id="error" class="error"></div>
+    <div id="result" class="result"></div>
+
+    <!-- Образовательный модуль -->
+    <div class="edu">
+      <h3>🧠 Узнай инсульт вовремя (FAST+)</h3>
+      <ul>
+        <li><strong>F</strong> — Face: асимметрия лица при улыбке</li>
+        <li><strong>A</strong> — Arms: слабость в одной руке</li>
+        <li><strong>S</strong> — Speech: невнятная или пропавшая речь</li>
+        <li><strong>T</strong> — Time: звони <strong>103 или 112</strong>!</li>
+        <li><strong>+</strong> — внезапная слепота, головокружение + дискоординация, «молниеносная» головная боль.</li>
+      </ul>
+      <h4>⚠️ Атипичные признаки (часто упускаются):</h4>
+      <ul>
+        <li>Икота + тошнота</li>
+        <li>Боль в груди/спине + спутанность сознания</li>
+        <li>Внезапная агрессия или апатия</li>
+        <li>Потеря сознания без судорог</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    function calculate() {
+      const err = document.getElementById('error');
+      const res = document.getElementById('result');
+      err.style.display = 'none';
+      res.style.display = 'none';
+
+      try {
+        const v = {
+          age: parseFloat(document.getElementById('age').value),
+          height: parseFloat(document.getElementById('height').value),
+          weight: parseFloat(document.getElementById('weight').value),
+          fam: parseInt(document.getElementById('fam').value),
+          activity: document.getElementById('activity').value,
+          smoking: document.getElementById('smoking').value,
+          htn: parseInt(document.getElementById('htn').value),
+          dm: parseInt(document.getElementById('dm').value),
+          palp: document.getElementById('palp').value,
+          dysp: document.getElementById('dysp').value,
+          diz: document.getElementById('diz').value,
+          afib: parseInt(document.getElementById('afib').value),
+          ldl: parseFloat(document.getElementById('ldl').value),
+          stroke: parseInt(document.getElementById('stroke').value),
+        };
+
+        if ([v.age, v.height, v.weight, v.ldl].some(isNaN)) {
+          throw new Error("Проверьте числовые поля.");
+        }
+
+        const bmi = v.weight / Math.pow(v.height / 100, 2);
+        let score = 0;
+        if (v.age >= 40) score += (v.age - 39) * 0.05;
+        if (v.stroke) score += 3.0;
+        if (v.htn) score += 2.0;
+        if (v.dm) score += 1.5;
+        if (v.afib) score += 2.0;
+        if (v.smoking === 'current') score += 1.3;
+        if (v.ldl > 3.0) score += 1.2;
+        if (v.fam) score += 1.0;
+        if (v.activity === 'sedentary') score += 0.8;
+        if (v.palp === 'often') score += 0.5;
+        if (v.dysp === 'often') score += 0.5;
+        if (v.diz === 'often') score += 0.6;
+        if (bmi >= 30) score += 1.0;
+
+        const risk = Math.min(score * 0.8, 10);
+        let level, message, cls, rec = '';
+
+        if (risk < 1) {
+          level = 'низкий';
+          cls = 'low';
+          message = 'Ваш риск инсульта в ближайшие полгода — низкий. Но профилактика важна в любом возрасте!';
+          rec = `<div class="rec"><strong>Рекомендации:</strong><br>✅ Поддерживайте здоровый образ жизни:<br>– Физическая активность: ≥150 мин умеренной нагрузки в неделю.<br>– Питание: <5 г соли/день, ≥400 г овощей/фруктов.<br>🩺 Самоконтроль:<br>– АД — 1 раз в месяц.<br>– ИМТ 18.5–24.9.<br>📅 Проходите диспансеризацию раз в год.</div>`;
+        } else if (risk <= 3) {
+          level = 'умеренный';
+          cls = 'moderate';
+          message = 'Ваш риск — выше среднего. Ваши действия в ближайшие недели могут его значительно снизить.';
+          rec = `<div class="rec"><strong>Приоритеты:</strong><br>🚨 Контроль АД: измеряйте ежедневно. При ≥140/90 ≥3 дня — к врачу.<br>🚭 Отказ от курения: эффект через 24 ч.<br>⚖️ Снижение веса на 5–10% снижает риск на 25%.<br>🚫 Исключите алкоголь.</div>`;
+        } else {
+          level = 'высокий';
+          cls = 'high';
+          message = '⚠️ Ваш риск инсульта в ближайшие месяцы — высокий. Требуется срочная врачебная оценка.';
+          rec = `<div class="rec"><strong>Срочные действия:</strong><br>🆘 При ЛЮБЫХ симптомах — звоните <strong>103 или 112</strong>!<br>Это может быть ТИА — предвестник инсульта.<br>🩺 Посетите терапевта в ближайшие дни.</div>`;
+        }
+
+        res.innerHTML = `<h3>Ваш прогнозируемый риск инсульта за 6 месяцев: <strong>${risk.toFixed(1)}%</strong> (${level})</h3><p>${message}</p>${rec}`;
+        res.className = 'result ' + cls;
+        res.style.display = 'block';
+        setTimeout(() => res.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+
+      } catch (e) {
+        err.textContent = 'Ошибка: ' + e.message;
+        err.style.display = 'block';
+        setTimeout(() => err.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+      }
+    }
+  </script>
+</body>
+</html>
